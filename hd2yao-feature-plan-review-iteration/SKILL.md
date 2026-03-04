@@ -33,7 +33,8 @@ Do not finish this skill with chat-only feedback. You MUST persist review result
    - Generate `./<plan-dir>/reviews/round-0N.claude-review-request.md` using the template in this skill.
    - Ask user to send only that request file to Claude (no extra explanation required).
    - Wait for Claude output file: `./<plan-dir>/reviews/round-0N.claude.md`.
-   - If Claude output file is missing, stop and ask user to provide it before continuing.
+   - If Claude output file is missing but raw Claude review text is available, persist that text verbatim to the expected file path before continuing.
+   - If neither file nor raw Claude review text is available, stop and ask user to provide one of them.
    - Classify Claude findings as Blocking, Important, or Minor.
    - Update the plan and write next version: `./<plan-dir>/<feature>.plan.vN+1.md`.
    - Write resolution mapping file: `./<plan-dir>/reviews/round-0N.codex-resolution.md`.
@@ -83,6 +84,9 @@ The generated `round-0N.claude-review-request.md` MUST be complete and directly 
 You are reviewing this plan file:
 - `<PLAN_FILE_PATH>`
 
+Required output file path:
+- `<CLAUDE_OUTPUT_FILE_PATH>`
+
 Your task:
 1. Read the entire plan.
 2. Review for correctness, completeness, feasibility, rollback safety, and testability.
@@ -110,6 +114,12 @@ Rules:
 - Each finding must include a specific suggested change.
 - Keep IDs stable in this round (e.g., `C-R0N-001`).
 - No vague comments.
+- You MUST write the final review content to `<CLAUDE_OUTPUT_FILE_PATH>` (not chat-only output).
+- Verify the file exists before your final response.
+
+Final response must be short:
+- `Saved file: <CLAUDE_OUTPUT_FILE_PATH>`
+- `Blocking: <count>, Important: <count>, Minor: <count>`
 ```
 
 ## Mandatory Persistence Rule
@@ -117,6 +127,7 @@ Rules:
 - Every iteration must persist review results to disk.
 - Simple path must create `simple-review.codex.md`.
 - Complex path must create the request file, Claude output file, Codex resolution file, and next plan version.
+- For Complex path, Claude review text is not valid until it is present in `round-0N.claude.md`.
 - Chat-only review summaries do not satisfy this skill's output requirement.
 - If file write or verification fails, report the blocker and stop. Do not hand off.
 
