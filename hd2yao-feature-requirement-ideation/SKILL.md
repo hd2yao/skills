@@ -12,7 +12,7 @@ Clarify what should be built before planning or implementation.
 **Announce at start:** "I'm using hd2yao-feature-requirement-ideation to clarify feature requirements."
 
 <HARD-GATE>
-Do not finish this skill with chat-only content. You MUST write the discovery output to disk and verify the file exists before handoff.
+Do not finish this skill with chat-only content. You MUST create a user-defined directory in the current repository and write the discovery output inside that directory before handoff.
 </HARD-GATE>
 
 ## Process
@@ -20,13 +20,17 @@ Do not finish this skill with chat-only content. You MUST write the discovery ou
 1. Collect context from user request and current project state.
 2. Clarify goals, scope boundaries, constraints, and success criteria.
 3. Identify assumptions and open questions explicitly.
-4. Write the discovery document to disk in the current repository root.
-5. Verify persistence with `test -f ./<feature>.discovery.md`.
-6. Report the saved file path, then ask for confirmation before moving to technical planning.
+4. Confirm a custom output directory name based on user requirement; if missing, propose one and record the assumption.
+5. Create the directory in the current repository root with `mkdir -p ./<custom-dir>`.
+6. Write the discovery document to `./<custom-dir>/<feature>.discovery.md`.
+7. Verify persistence with `test -d ./<custom-dir>` and `test -f ./<custom-dir>/<feature>.discovery.md`.
+8. Report the saved file path, then ask for confirmation before moving to technical planning.
 
 ## Output
 
-Save to: `./<feature>.discovery.md`
+Save to: `./<custom-dir>/<feature>.discovery.md`
+
+Directory: `./<custom-dir>` must be created in current repository root and should follow user-defined naming.
 
 Use this structure:
 
@@ -55,7 +59,7 @@ Use this structure:
 
 ## Mandatory Persistence Rule
 
-- Writing to disk is required, not optional.
+- Creating the user-defined directory and writing to disk are both required.
 - Chat-only summaries do not satisfy this skill's output requirement.
 - If file write or verification fails, report the blocker and stop. Do not hand off.
 
@@ -65,7 +69,8 @@ Do not hand off to planning until:
 - Scope and non-goals are explicit.
 - Acceptance criteria are testable.
 - Open questions are either resolved or tracked.
-- `./<feature>.discovery.md` exists on disk and its path has been reported.
+- `./<custom-dir>` exists on disk.
+- `./<custom-dir>/<feature>.discovery.md` exists on disk and its path has been reported.
 
 ## Handoff
 
