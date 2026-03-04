@@ -12,28 +12,54 @@ Iterate plan documents based on review feedback with strict traceability.
 **Announce at start:** "I'm using hd2yao-feature-plan-review-iteration to process review feedback and iterate the plan."
 
 <HARD-GATE>
-Do not finish this skill with chat-only feedback. You MUST write the next plan version to disk and verify it exists before handoff.
+Do not finish this skill with chat-only feedback. You MUST persist review results to disk before handoff.
 </HARD-GATE>
 
 ## Process
 
 1. Locate the latest plan file: `./<feature>.plan.vN.md` (or user-provided plan path).
-2. Set current review round index `N` and create review directory beside the plan file: `./<plan-dir>/reviews/`.
-3. Generate `./<plan-dir>/reviews/round-0N.claude-review-request.md` using the template in this skill.
-4. Ask user to send only that request file to Claude (no extra explanation required).
-5. Wait for Claude output file: `./<plan-dir>/reviews/round-0N.claude.md`.
-6. If Claude output file is missing, stop and ask user to provide it before continuing.
-7. Classify Claude findings as Blocking, Important, or Minor.
-8. Update the plan and write next version: `./<plan-dir>/<feature>.plan.vN+1.md`.
-9. Write resolution mapping file: `./<plan-dir>/reviews/round-0N.codex-resolution.md`.
-10. Verify persistence for all round artifacts and next plan version.
-11. Report saved paths and repeat until no blocking comments remain.
+2. Create review directory beside the plan file: `./<plan-dir>/reviews/`.
+3. Run complexity triage first and choose one path:
+   - Simple path: small/easy change, limited blast radius.
+   - Complex path: larger change, multi-module risk, or unclear feasibility.
+4. For Simple path:
+   - Review directly in Codex (no Claude round-trip file required).
+   - Classify findings as Blocking, Important, or Minor.
+   - Update plan only if needed; if updated, write `./<plan-dir>/<feature>.plan.vN+1.md`.
+   - Write summary to `./<plan-dir>/reviews/simple-review.codex.md`.
+   - Verify persistence and, if gate passes, directly prompt user to execute `hd2yao-feature-implementation-delivery`.
+5. For Complex path:
+   - Set current review round index `N`.
+   - Generate `./<plan-dir>/reviews/round-0N.claude-review-request.md` using the template in this skill.
+   - Ask user to send only that request file to Claude (no extra explanation required).
+   - Wait for Claude output file: `./<plan-dir>/reviews/round-0N.claude.md`.
+   - If Claude output file is missing, stop and ask user to provide it before continuing.
+   - Classify Claude findings as Blocking, Important, or Minor.
+   - Update the plan and write next version: `./<plan-dir>/<feature>.plan.vN+1.md`.
+   - Write resolution mapping file: `./<plan-dir>/reviews/round-0N.codex-resolution.md`.
+   - Verify persistence for all round artifacts and next plan version.
+   - Report saved paths and repeat until no blocking comments remain.
+
+## Complexity Triage Standard
+
+Default to **Simple path** only when all conditions are true:
+- Estimated change scope is small and localized (typically <=2 modules/files of substantive logic).
+- No schema migration, auth/security model change, or cross-system contract change.
+- No high-risk rollback concern.
+- Plan tasks are straightforward and implementation uncertainty is low.
+
+Use **Complex path** when any condition above is not met.
 
 ## Output
 
-Primary output: `./<plan-dir>/<feature>.plan.vN+1.md`
+Primary output:
+- If plan changed: `./<plan-dir>/<feature>.plan.vN+1.md`
+- If plan unchanged: reuse latest plan path and record decision in review output.
 
-Round artifacts (required):
+Simple path artifact (required):
+- `./<plan-dir>/reviews/simple-review.codex.md`
+
+Complex path artifacts (required only for complex path):
 - `./<plan-dir>/reviews/round-0N.claude-review-request.md`
 - `./<plan-dir>/reviews/round-0N.claude.md`
 - `./<plan-dir>/reviews/round-0N.codex-resolution.md`
@@ -88,23 +114,24 @@ Rules:
 
 ## Mandatory Persistence Rule
 
-- Every review iteration must create the request file, Claude output file, Codex resolution file, and next plan version on disk.
+- Every iteration must persist review results to disk.
+- Simple path must create `simple-review.codex.md`.
+- Complex path must create the request file, Claude output file, Codex resolution file, and next plan version.
 - Chat-only review summaries do not satisfy this skill's output requirement.
 - If file write or verification fails, report the blocker and stop. Do not hand off.
 
 ## Quality Gate
 
 Implementation can start only when:
-- Latest Claude review file exists on disk.
 - Blocking comments count is 0.
 - Important comments are resolved or explicitly deferred.
-- Decisions are documented in the review log.
-- The latest `./<plan-dir>/<feature>.plan.vN+1.md` file exists on disk and its path has been reported.
-- Round artifacts are complete under `./<plan-dir>/reviews/`.
+- Decisions are documented in a review log (inside updated plan or `simple-review.codex.md`).
+- For Simple path: `simple-review.codex.md` exists and plan path is reported.
+- For Complex path: latest Claude review exists and round artifacts are complete under `./<plan-dir>/reviews/`.
 
 ## Single-Use Mode
 
-If user asks for one pass only, run one iteration and stop after writing all round artifacts and next plan version.
+If user asks for one pass only, run one iteration and stop after writing required artifacts for the selected path.
 
 ## Handoff
 
